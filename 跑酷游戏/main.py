@@ -9,7 +9,6 @@ from obstacle import ObstacleManager
 # 初始化pygame
 pygame.init()
 
-#增添一行来进行测试
 class Game:
     def __init__(self):
         # 创建窗口
@@ -62,25 +61,16 @@ class Game:
         """加载背景图片"""
         # 尝试加载背景图片
         background_path = 'image/像素背景.png'
-
-        if os.path.exists(background_path):
-            try:
-                # 加载图片并调整大小为800x600
-                background = pygame.image.load(background_path).convert()
-                background = pygame.transform.scale(background, (800, 600))
-                print(f"成功加载背景图片: {background_path}")
-                return background
-            except Exception as e:
-                print(f"无法加载背景图片 {background_path}: {e}")
-
-        # 如果找不到背景图片，使用默认的纯色背景
-        print("未找到背景图片，使用默认背景")
-        return None
+        # 加载图片并调整大小为800x600
+        background = pygame.image.load(background_path).convert()
+        background = pygame.transform.scale(background, (800, 600))
+        print(f"成功加载背景图片: {background_path}")
+        return background
 
     def handle_events(self):
         """处理游戏事件"""
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT:#退出游戏
                 self.running = False
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -111,7 +101,7 @@ class Game:
                             self.player.jump()
 
                     # 返回菜单
-                    elif event.key == pygame.K_ESCAPE:
+                    elif event.key == pygame.K_ESCAPE:#游戏过程中ESC也会退回主页面
                         self.state = "menu"
                         self.reset_game()
 
@@ -150,9 +140,9 @@ class Game:
 
             # 检测碰撞
             if self.player and self.obstacle_manager.check_collisions(self.player.rect):
-                self.state = "game_over"
+                self.state = "game_over"#碰撞即跳到游戏结束页面
                 self.game_over_time = time.time()
-                if self.score > self.high_score:
+                if self.score > self.high_score:#更新最高分
                     self.high_score = int(self.score)
 
         elif self.state == "game_over":
@@ -285,16 +275,7 @@ class Game:
     def draw_game(self):
         """绘制游戏画面"""
         # 绘制背景
-        if self.background:
-            # 使用背景图片
-            self.screen.blit(self.background, (0, 0))
-        else:
-            # 如果没有背景图片，使用原来的纯色背景
-            self.screen.fill((200, 230, 255))  # 淡蓝色天空
-            # 绘制地面
-            pygame.draw.rect(self.screen, (139, 69, 19), (0, 300, 800, 300))  # 棕色地面
-            pygame.draw.line(self.screen, (160, 120, 80), (0, 300), (800, 300), 3)  # 地面线
-
+        self.screen.blit(self.background, (0, 0))
         # 绘制障碍物
         self.obstacle_manager.draw(self.screen)
 

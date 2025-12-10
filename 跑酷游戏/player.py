@@ -58,9 +58,9 @@ class Player:
         # 更新位置
         self.rect.y += self.velocity_y
 
-        # 检测是否到达地面 (y=300)
-        if self.rect.bottom >= 300:
-            self.rect.bottom = 300
+        # 检测是否到达地面 (y=400)
+        if self.rect.bottom >= 400:#更改了地面
+            self.rect.bottom = 400
             self.velocity_y = 0
             self.on_ground = True
             self.jump_count = 0
@@ -75,13 +75,8 @@ class Player:
 
     def draw(self, screen):
         """绘制玩家"""
-        if self.image:
-            # 绘制图片角色
-            screen.blit(self.image, self.rect)
-        else:
-            # 绘制颜色方块角色
-            pygame.draw.rect(screen, self.color, self.rect)
-            pygame.draw.rect(screen, (0, 0, 0), self.rect, 2)
+        screen.blit(self.image, self.rect)
+
 
         # 显示跳跃次数
         font = pygame.font.Font(None, 24)

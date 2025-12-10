@@ -1,9 +1,9 @@
 # game_settings.py
-
+#这一个文件基本没有用，只是将参数放在这里，更改的时候还是要在main,player,ob里面改才有用
 # 屏幕设置
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
-GROUND_Y = 300  # 地面Y坐标
+GROUND_Y = 400  # 地面Y坐标
 
 # 颜色
 WHITE = (255, 255, 255)

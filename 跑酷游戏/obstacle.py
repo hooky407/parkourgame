@@ -62,7 +62,7 @@ class ObstacleManager:
         # 随机高度和宽度
         obstacle_height = random.randint(25, 40)
         obstacle_width = random.randint(25, 40)
-        obstacle_y = 300 - obstacle_height  # 底部在地面上
+        obstacle_y = 400 - obstacle_height  # 底部在地面上，地面为400
 
         # 障碍物速度
         obstacle_speed = 2

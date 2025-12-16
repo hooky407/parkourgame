@@ -1,38 +1,23 @@
 # player.py
 import pygame
 import os
+import glob
 
 
 class Player:
-    def __init__(self, x, y, can_double_jump=False, player_id=1, image_path=None):
-        # ============ 修改：固定X坐标 ============
-        self.fixed_x = 100  # 固定X坐标（与Game类中保持一致）
-        self.rect = pygame.Rect(self.fixed_x, y, 50, 50)  # x使用固定值
-        
-        # ============ 新增：跑动动画相关 ============
-        self.run_frames = []  # 跑动动画帧列表
-        self.current_frame = 0  # 当前动画帧索引
-        self.animation_timer = 0  # 动画计时器
-        self.animation_speed = 0.15  # 动画播放速度（值越大越快）
-        self.is_running = True  # 是否在跑动状态
+    def __init__(self, x, y, can_double_jump=False, player_id=1, image_folder=None):
+        # 基本属性
+        self.rect = pygame.Rect(x, y, 50, 50)
 
-        # 加载角色图片
-        self.load_character_images(image_path)
+        # 动画相关属性
+        self.animation_frames = []  # 存储所有动画帧
+        self.current_frame = 0  # 当前帧索引
+        self.animation_speed = 10  # 动画速度（帧数越高越慢）
+        self.animation_counter = 0  # 动画计数器
 
-        # 加载角色图片
-        self.image = None
-        if image_path and os.path.exists(image_path):
-            try:
-                self.image = pygame.image.load(image_path).convert_alpha()
-                self.image = pygame.transform.scale(self.image, (50, 50))
-            except:
-                self.image = None
+        # 加载动画帧
+        self.load_animation_frames(image_folder)
 
-        # 如果没有图片，使用颜色
-        if not self.image:
-            self.color = (0, 255, 0) if can_double_jump else (0, 0, 255)
-        else:
-            self.color = None
 
         # 物理属性
         self.velocity_y = 0
@@ -47,203 +32,107 @@ class Player:
         # 跳跃参数
         self.jump_power = -12
 
-        # ============ 新增：地面高度 ============
-        self.ground_y = 450  # 地面高度（与Game类中的ground_y保持一致）
+        # 动画状态
+        self.is_moving = False
+        self.is_jumping = False
+        self.last_update_time = pygame.time.get_ticks()
 
-    def load_character_images(self, image_path):
-        """加载角色图片和动画帧"""
-        if image_path and os.path.exists(image_path):
-            try:
-                # 加载主图片
-                main_image = pygame.image.load(image_path).convert_alpha()
-                main_image = pygame.transform.scale(main_image, (50, 50))
-                
-                # ============ 新增：创建跑动动画帧 ============
-                # 方法1：使用主图片创建简单动画帧
-                self.create_simple_animation_frames(main_image)
-                
-            except Exception as e:
-                print(f"加载角色图片失败: {e}")
-                self.run_frames = []
-        else:
-            # 如果没有图片路径，创建默认动画帧
-            self.create_default_animation_frames()
+        print(f"角色{player_id}加载完成，动画帧数: {len(self.animation_frames) if self.animation_frames else 0}")
 
-    def create_simple_animation_frames(self, base_image):
-        """使用基础图片创建简单的跑动动画帧"""
-        self.run_frames = []
-        
-        # 创建4个动画帧（模拟跑动）
-        for i in range(4):
-            # 创建一个新的Surface
-            frame = pygame.Surface((50, 50), pygame.SRCALPHA)
-            
-            # 复制基础图片
-            frame.blit(base_image, (0, 0))
-            
-            # 根据帧数轻微调整位置，模拟跑动
-            if i == 0 or i == 2:
-                # 中间位置
-                pass
-            elif i == 1:
-                # 轻微向上（跳起状态）
-                frame = pygame.transform.rotate(frame, 5)
-            elif i == 3:
-                # 轻微向下（落地状态）
-                frame = pygame.transform.rotate(frame, -5)
-            
-            self.run_frames.append(frame)
+    def load_animation_frames(self, folder_path):
+        """加载动画帧"""
+
+        # 支持的图片格式
+        image_extensions = ['*.png', '*.jpg', '*.jpeg', '*.bmp', '*.gif']
+
+        # 收集所有图片文件
+        image_files = []
+        for ext in image_extensions:
+            image_files.extend(glob.glob(os.path.join(folder_path, ext)))
+
+        # 按文件名排序（确保帧顺序正确）
+        image_files.sort()
+
+        if not image_files:
+            print(f"警告：在文件夹 {folder_path} 中未找到图片文件")
+            self.animation_frames = None
+            return
+
+        # 加载所有图片
+        for img_path in image_files:
+            img = pygame.image.load(img_path).convert_alpha()
+            img = pygame.transform.scale(img, (50, 50))
+            self.animation_frames.append(img)
+            print(f"加载动画帧: {os.path.basename(img_path)}")
+
+        print(f"成功加载 {len(self.animation_frames)} 个动画帧")
+
+    def update_animation(self):
+        """更新动画"""
+        if not self.animation_frames or len(self.animation_frames) <= 1:
+            return
+
+        # 更新动画计数器
+        self.animation_counter += 1
+
+        # 根据速度更新动画帧
+        if self.animation_counter >= self.animation_speed:
+            self.animation_counter = 0
+            self.current_frame = (self.current_frame + 1) % len(self.animation_frames)
 
     def jump(self):
         """执行跳跃"""
         if self.jump_count < self.max_jump_count:
             self.velocity_y = self.jump_power
             self.on_ground = False
+            self.is_jumping = True
             self.jump_count += 1
-
-            # ============ 修改：跳跃时暂停跑动动画 ============
-            self.is_running = False
 
             # 如果是二段跳，给一个较小的速度
             if self.jump_count == 2 and self.can_double_jump:
-                self.velocity_y = self.jump_power * 0.8
-
-                # ============ 新增：二段跳特殊效果 ============
-                self.create_jump_particles()
+                self.velocity_y = self.jump_power * 0.8  # 二段跳高度稍低
 
             return True
         return False
 
-    def create_default_animation_frames(self):
-        """创建默认的跑动动画帧（没有图片时使用）"""
-        self.run_frames = []
-        
-        # 定义不同帧的颜色
-        if self.can_double_jump:
-            colors = [
-                (0, 180, 0),    # 深绿
-                (0, 220, 0),    # 中绿
-                (0, 255, 0),    # 亮绿
-                (0, 220, 0),    # 中绿
-            ]
-        else:
-            colors = [
-                (0, 0, 180),    # 深蓝
-                (0, 0, 220),    # 中蓝
-                (0, 0, 255),    # 亮蓝
-                (0, 0, 220),    # 中蓝
-            ]
-        
-        # 创建4个动画帧
-        for i, color in enumerate(colors):
-            frame = pygame.Surface((50, 50), pygame.SRCALPHA)
-            
-            # 绘制身体
-            pygame.draw.rect(frame, color, (10, 5, 30, 40), border_radius=5)
-            
-            # 绘制腿（模拟跑动动画）
-            leg_offset = (i % 3) * 5  # 腿的位置偏移
-            if i % 2 == 0:
-                # 左腿在前
-                pygame.draw.rect(frame, color, (15, 40, 8, 15 + leg_offset))
-                pygame.draw.rect(frame, color, (27, 40, 8, 10 - leg_offset))
-            else:
-                # 右腿在前
-                pygame.draw.rect(frame, color, (15, 40, 8, 10 - leg_offset))
-                pygame.draw.rect(frame, color, (27, 40, 8, 15 + leg_offset))
-            
-            # 绘制眼睛
-            pygame.draw.circle(frame, (255, 255, 255), (20, 20), 4)
-            pygame.draw.circle(frame, (255, 255, 255), (30, 20), 4)
-            pygame.draw.circle(frame, (0, 0, 0), (20, 20), 2)
-            pygame.draw.circle(frame, (0, 0, 0), (30, 20), 2)
-            self.run_frames.append(frame)
-        
-        self.current_image = self.run_frames[0]
-
-    def update_animation(self):
-        """更新跑动动画"""
-        if not self.is_running or not self.on_ground:
-            return
-            
-        # 更新动画计时器
-        self.animation_timer += self.animation_speed
-        
-        # 切换到下一帧
-        if self.animation_timer >= 1:
-            self.animation_timer = 0
-            self.current_frame = (self.current_frame + 1) % len(self.run_frames)
-            if self.run_frames:
-                self.current_image = self.run_frames[self.current_frame]
-
-
     def update(self):
         """更新玩家状态"""
         # 应用重力
-        self.velocity_y += 0.5
+        self.velocity_y += 0.5  # 重力加速度
 
         # 更新位置
         self.rect.y += self.velocity_y
 
         # 检测是否到达地面 (y=400)
-        if self.rect.bottom >= self.ground_y:
-            self.rect.bottom = self.ground_y
+        if self.rect.bottom >= 400:
+            self.rect.bottom = 400
             self.velocity_y = 0
             self.on_ground = True
-            self.jump_count = 0
+            self.is_jumping = False
+            self.jump_count = 0  # 重置跳跃次数
 
-            # ============ 新增：落地后恢复跑动动画 ============
-            self.is_running = True
-
-            # ============ 新增：更新动画 ============
-            self.update_animation()
-                
-            # ============ 重要：保持X坐标固定 ============
-            self.rect.x = self.fixed_x
-
-
+        # 更新动画
+        self.update_animation()
 
     def reset_position(self, x, y):
         """重置玩家位置"""
-        # ============ 修改：X坐标保持固定，只更新Y坐标 ============
-        self.rect.x = self.fixed_x  # 固定X坐标
+        self.rect.x = x
         self.rect.y = y
         self.velocity_y = 0
         self.on_ground = True
+        self.is_jumping = False
         self.jump_count = 0
-        self.is_running = True
-        
-        # ============ 新增：重置动画 ============
-        self.current_frame = 0
-        self.animation_timer = 0
-        if self.run_frames:
-            self.current_image = self.run_frames[0]
+        self.current_frame = 0  # 重置动画帧
 
     def draw(self, screen):
         """绘制玩家"""
-        if self.run_frames:
-            # ============ 修改：绘制当前动画帧 ============
-            screen.blit(self.current_image, self.rect)
-        elif self.color:
-            # 如果没有动画帧，使用颜色方块
-            pygame.draw.rect(screen, self.color, self.rect, border_radius=5)
-            
-            # 添加简单的眼睛
-            pygame.draw.circle(screen, (255, 255, 255), 
-                              (self.rect.x + 15, self.rect.y + 20), 4)
-            pygame.draw.circle(screen, (255, 255, 255), 
-                              (self.rect.x + 35, self.rect.y + 20), 4)
+        # 绘制当前动画帧
+        current_image = self.animation_frames[self.current_frame]
+        screen.blit(current_image, self.rect)
 
-        # 显示跳跃次数（调试信息）
-        font = pygame.font.Font(None, 24)
-        jump_text = f"跳跃: {self.jump_count}/{self.max_jump_count}"
+
+        # 显示跳跃次数
+        font = pygame.font.Font('image/STKAITI.TTF', 24)
+        jump_text = f"跳: {self.jump_count}/{self.max_jump_count}"
         jump_surface = font.render(jump_text, True, (255, 255, 255))
         screen.blit(jump_surface, (self.rect.x, self.rect.y - 25))
-        
-        # ============ 可选：绘制碰撞框（调试用） ============
-        # pygame.draw.rect(screen, (255, 0, 0), self.rect, 1)
-
-    # ============ 新增：设置地面高度的方法 ============
-    def set_ground_y(self, ground_y):
-        """设置地面高度（需要与Game类同步）"""
-        self.ground_y = ground_y

@@ -28,9 +28,9 @@ class Game:
         self.player = None  # 玩家对象
 
         # 角色图片路径
-        self.character_images = {
-            1: 'gif/Image_1765010414800_frame_1.png',  # 角色1图片
-            2: 'gif/Image_1765010414800_frame_13.png'  # 角色2图片
+        self.character_animation_folders = {
+            1: 'gif',  # 角色1动画帧文件夹
+            2: 'gif'  # 角色2动画帧文件夹
         }
 
         # 角色能力
@@ -39,9 +39,8 @@ class Game:
             2: {"can_double_jump": True, "name": "二段跳角色"}
         }
 
-        # ============ 修改：障碍物管理器初始化 ============
-        # 修改创建障碍物管理器的代码，传入滚动速度
-        self.obstacle_manager = ObstacleManager(scroll_speed=self.bg_scroll_speed)
+        # 创建障碍物管理器
+        self.obstacle_manager = ObstacleManager()
 
         # 分数
         self.score = 0
@@ -50,17 +49,13 @@ class Game:
         # 加载背景图片
         self.background = self.load_background()
 
-        # ============ 新增：背景滚动属性 ============
-        self.bg_scroll_speed = 3  # 背景滚动速度
-        self.bg_x = 0  # 背景水平位置
-        self.bg_width = 800  # 背景图片宽度（确保和窗口一样宽）
-        
-        # ============ 新增：地面属性 ============
-        self.ground_y = 450  # 地面高度（之前是250，现在提高让角色看起来在地上跑）
+        # 加载菜单UI背景图片
+        self.menu_background = self.load_uibackground()
 
-        # ============ 修改：玩家初始Y坐标 ============
-        
-        
+        #滚动背景位置
+        self.bg_x1 = 0
+        self.bg_x2 = 800
+
         # 字体
         self.font = pygame.font.Font('image/STKAITI.TTF', 48)
         self.medium_font = pygame.font.Font('image/STKAITI.TTF', 36)
@@ -68,7 +63,6 @@ class Game:
 
         # 鼠标状态
         self.mouse_pos = (0, 0)
-        
 
     def load_background(self):
         """加载背景图片"""
@@ -79,6 +73,16 @@ class Game:
         background = pygame.transform.scale(background, (800, 600))
         print(f"成功加载背景图片: {background_path}")
         return background
+
+    def load_uibackground(self):
+        """加载背景图片"""
+        # 尝试加载背景图片
+        uibackground_path = 'image/背景.jpg'
+        # 加载图片并调整大小为800x600
+        uibackground = pygame.image.load(uibackground_path).convert()
+        uibackground = pygame.transform.scale(uibackground, (800, 600))
+        print(f"成功加载背景图片: {uibackground_path}")
+        return uibackground
 
     def handle_events(self):
         """处理游戏事件"""
@@ -142,15 +146,15 @@ class Game:
         """更新游戏状态"""
         if self.state == "playing":
 
-            # ============ 新增：更新背景滚动 ============
+            #更新背景滚动
             self.update_background()
-            
+
             # 更新玩家
             if self.player:
                 self.player.update()
 
-            # ============ 修改：更新障碍物时传入滚动速度 ============
-            self.obstacle_manager.update(scroll_speed=self.bg_scroll_speed)
+            # 更新障碍物
+            self.obstacle_manager.update()
 
             # 增加分数
             self.score += 0.1
@@ -162,17 +166,27 @@ class Game:
                 if self.score > self.high_score:#更新最高分
                     self.high_score = int(self.score)
 
-            # ============ 新增：随分数增加游戏速度 ============
-            if int(self.score) % 100 == 0:  # 每100分增加速度
-                self.bg_scroll_speed += 0.1
-                # 更新障碍物管理器的速度
-                self.obstacle_manager.set_scroll_speed(self.bg_scroll_speed)
-
         elif self.state == "game_over":
             # 5秒后自动返回菜单
             if time.time() - self.game_over_time > 5:
                 self.state = "menu"
                 self.reset_game()
+
+    def update_background(self):
+        """更新背景滚动位置"""
+        # 使用与障碍物相同的速度滚动背景
+        # 障碍物默认速度为2（在obstacle.py中设置）
+        scroll_speed = 8
+
+        # 更新背景位置
+        self.bg_x1 -= scroll_speed
+        self.bg_x2 -= scroll_speed
+
+        # 如果背景图片完全移出屏幕，重置到右侧
+        if self.bg_x1 <= -800:
+            self.bg_x1 = 800
+        if self.bg_x2 <= -800:
+            self.bg_x2 = 800
 
     def start_game(self):
         """开始游戏"""
@@ -180,28 +194,17 @@ class Game:
         if not self.selected_character:
             self.selected_character = 1
 
-        # ============ 修改：玩家初始位置 ============
-        # 将Y坐标从250改为地面高度-角色高度
-        # 假设角色高度约80像素
-        player_start_y = self.ground_y - 80
-
-        # 创建玩家对象
+        # 创建玩家对象（使用动画帧方案1）
         ability = self.character_abilities[self.selected_character]
-        image_path = self.character_images[self.selected_character]
-        self.player = Player(100, player_start_y, 
+        animation_folder = self.character_animation_folders[self.selected_character]
+
+        self.player = Player(100, 250,
                              can_double_jump=ability["can_double_jump"],
                              player_id=self.selected_character,
-                             image_path=image_path)
-
-        # ============ 新增：设置玩家的地面高度 ============
-        if self.player:
-            self.player.set_ground_y(self.ground_y)
+                             image_folder=animation_folder)
 
         # 重置游戏状态
         self.score = 0
-
-        # ============ 修改：重置背景滚动位置 ============
-        self.bg_x = 0
         self.obstacle_manager.clear()
         self.state = "playing"
 
@@ -209,27 +212,13 @@ class Game:
         """重置游戏"""
         # 重置玩家位置
         if self.player:
-           # ============ 修改：玩家Y坐标使用地面高度 ============
-            player_start_y = self.ground_y - 80
-            self.player.reset_position(100, player_start_y)
+            self.player.reset_position(100, 250)
+
         # 清空障碍物
         self.obstacle_manager.clear()
 
-        # ============ 新增：重置背景位置 ============
-        self.bg_x = 0
-
         # 重置分数
         self.score = 0
-
-    #新增背景滚动方法
-    def update_background(self):
-    """更新背景滚动位置"""
-    # 背景向左滚动（创造角色向右跑的错觉）
-    self.bg_x -= self.bg_scroll_speed
-    
-    # 如果背景完全移出屏幕，重置位置（实现无缝滚动）
-    if self.bg_x <= -self.bg_width:
-        self.bg_x = 0
 
     def draw(self):
         """绘制游戏画面"""
@@ -246,7 +235,7 @@ class Game:
     def draw_menu(self):
         """绘制主菜单"""
         # 绘制背景
-        self.screen.fill((50, 50, 80))
+        self.screen.blit(self.menu_background, (0, 0))
 
         # 绘制标题
         title_text = self.font.render("选择你的角色", True, (255, 255, 200))
@@ -261,12 +250,9 @@ class Game:
         pygame.draw.rect(self.screen, (255, 255, 255), char1_rect, 3, border_radius=10)
 
         # 绘制角色1图片或占位符
-        try:
-            img = pygame.image.load(self.character_images[1]).convert_alpha()
-            img = pygame.transform.scale(img, (80, 80))
-            self.screen.blit(img, (260, 260))
-        except:
-            pygame.draw.rect(self.screen, (0, 0, 255), (260, 260, 80, 80))
+        img = pygame.image.load('gif/Image_1765010414800_frame_1.png').convert_alpha()
+        img = pygame.transform.scale(img, (80, 80))
+        self.screen.blit(img, (260, 260))
 
         # 绘制角色1描述
         char1_text = self.small_font.render("角色1", True, (255, 255, 255))
@@ -284,12 +270,10 @@ class Game:
         pygame.draw.rect(self.screen, (255, 255, 255), char2_rect, 3, border_radius=10)
 
         # 绘制角色2图片或占位符
-        try:
-            img = pygame.image.load(self.character_images[2]).convert_alpha()
-            img = pygame.transform.scale(img, (80, 80))
-            self.screen.blit(img, (460, 260))
-        except:
-            pygame.draw.rect(self.screen, (0, 255, 0), (460, 260, 80, 80))
+        img = pygame.image.load('gif/Image_1765010414800_frame_10.png').convert_alpha()
+        img = pygame.transform.scale(img, (80, 80))
+        self.screen.blit(img, (460, 260))
+
 
         # 绘制角色2描述
         char2_text = self.small_font.render("角色2", True, (255, 255, 255))
@@ -323,22 +307,9 @@ class Game:
 
     def draw_game(self):
         """绘制游戏画面"""
-        # ============ 修改：绘制滚动的背景 ============
-        # 绘制第一张背景
-        self.screen.blit(self.background, (self.bg_x, 0))
-        # 绘制第二张背景（实现无缝滚动）
-        self.screen.blit(self.background, (self.bg_x + self.bg_width, 0))
-        
-        # ============ 新增：绘制地面 ============
-        ground_color = (139, 69, 19)  # 棕色地面
-        pygame.draw.rect(self.screen, ground_color, 
-                         (0, self.ground_y, 800, 600 - self.ground_y))
-        
-        # 绘制地面纹理
-        for i in range(0, 800, 20):
-            pygame.draw.line(self.screen, (0, 100, 0),
-                            (i + (self.bg_x % 20), self.ground_y),
-                            (i + (self.bg_x % 20), self.ground_y + 5), 2)
+        # 绘制背景
+        self.screen.blit(self.background, (self.bg_x1, 0))
+        self.screen.blit(self.background, (self.bg_x2, 0))
         # 绘制障碍物
         self.obstacle_manager.draw(self.screen)
 
@@ -366,10 +337,6 @@ class Game:
         player_name = self.character_abilities[self.selected_character]["name"]
         player_text = self.small_font.render(f"当前角色: {player_name}", True, (255, 0, 0))
         self.screen.blit(player_text, (300, 10))
-
-        # ============ 新增：绘制游戏速度 ============
-        speed_text = self.small_font.render(f"速度: {self.bg_scroll_speed:.1f}", True, (200, 255, 200))
-        self.screen.blit(speed_text, (500, 10))
 
         # 绘制控制说明
         controls = [
@@ -423,6 +390,4 @@ class Game:
 
 if __name__ == "__main__":
     game = Game()
-
     game.run()
-

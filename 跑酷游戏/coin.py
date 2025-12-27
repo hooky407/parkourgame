@@ -138,6 +138,17 @@ class Coin:
 
 
 class CoinManager:
+
+    def ground_blocked(self, spawn_x):
+        if not self.obstacle_manager:
+            return False
+
+        for ob in self.obstacle_manager.obstacles:
+            # 如果障碍物在金币生成区间内
+            if abs(ob.rect.x - spawn_x) < 120:
+                return True
+        return False
+
     def __init__(self, obstacle_manager=None):
         self.coins = []
         self.spawn_timer = 0
@@ -149,9 +160,10 @@ class CoinManager:
         self.ground_coin_count_range = (2, 5)  # 每次生成地面金币的数量范围
         self.ground_coin_spacing = 30  # 地面金币之间的水平间距
 
+        self.waiting_after_obstacle = False
+
         # 障碍物管理器引用（用于检测金币与障碍物的碰撞）
         self.obstacle_manager = obstacle_manager
-        self.safe_distance = 50  # 金币与障碍物的安全距离
 
         # 金币收集音效（可选）
         self.collect_sound = None
@@ -174,82 +186,86 @@ class CoinManager:
             print("无法加载音效，将静音运行")
             self.collect_sound = None
 
-    def check_collision_with_obstacles(self, coin_rect):
-        """检查金币是否与障碍物重合或太近"""
+    def obstacle_too_close(self, min_gap):
         if not self.obstacle_manager:
             return False
 
-        # 获取所有障碍物的矩形
-        obstacle_rects = self.obstacle_manager.get_all_obstacle_rects()
+        if not self.obstacle_manager.obstacles:
+            return False
 
-        for obstacle_rect in obstacle_rects:
-            # 计算两个矩形之间的最小距离
-            dx = min(coin_rect.right, obstacle_rect.right) - max(coin_rect.left, obstacle_rect.left)
-            dy = min(coin_rect.bottom, obstacle_rect.bottom) - max(coin_rect.top, obstacle_rect.top)
+        last_ob = self.obstacle_manager.obstacles[-1]
 
-            # 如果有重叠或距离太近
-            if dx > -self.safe_distance and dy > -self.safe_distance:
-                return True
+        # 障碍物还没离开生成区 enough distance
+        if last_ob.rect.x > 800 - min_gap:
+            return True
 
         return False
 
     def spawn_coins_group(self, x, is_ground_group=False):
-        """生成一组金币，检查是否与障碍物重合"""
         coins = []
 
         if is_ground_group:
-            # 地面金币组：整齐排列
             count = random.randint(*self.ground_coin_count_range)
-            base_y = 350  # 地面高度
+            base_y = 350
 
             for i in range(count):
                 coin_x = x + i * self.ground_coin_spacing
-                coin_size = 25  # 地面金币大小固定
-                coin_rect = pygame.Rect(coin_x, base_y, coin_size, coin_size)
+                coin = Coin(
+                    coin_x,
+                    base_y,
+                    is_ground_coin=True
+                )
+                coins.append(coin)
 
-                # 检查这个金币是否与障碍物重合
-                if not self.check_collision_with_obstacles(coin_rect):
-                    coin = Coin(coin_x, base_y, coin_size, self.coin_speed, is_ground_coin=True)
-                    coins.append(coin)
-                else:
-                    # 如果有一个金币与障碍物重合，整组都不生成
-                    return []
+
         else:
-            # 空中金币：单个生成，有轻微浮动
-            # 尝试最多3次生成位置
-            for _ in range(3):
-                coin_y = random.randint(220, 280)
-                coin_size = random.randint(22, 28)
-                coin_rect = pygame.Rect(x, coin_y, coin_size, coin_size)
+            # ===== 空中金币（关键在这里）=====
+            spawn_y = random.randint(220, 260)
 
-                # 检查这个金币是否与障碍物重合
-                if not self.check_collision_with_obstacles(coin_rect):
-                    coin = Coin(x, coin_y, coin_size, self.coin_speed, is_ground_coin=False)
-                    coins.append(coin)
+            # ⭐ 如果地面被障碍物挡住，把金币放到障碍物上方
+            for ob in self.obstacle_manager.obstacles:
+                if abs(ob.rect.x - x) < 120:
+                    spawn_y = ob.rect.top - 40
                     break
+
+            coin = Coin(x, spawn_y, is_ground_coin=False)
+            coins.append(coin)
 
         return coins
 
-    def spawn_coin(self):
-        """生成新的金币（地面组或空中单个）"""
-        # 70%概率生成地面金币组，30%概率生成空中金币
-        spawn_ground_group = random.random() < 0.7
+    def has_upcoming_obstacle(self, spawn_x):
+        if not self.obstacle_manager:
+            return False
 
-        # 检查与上一个金币组的间隔
+        for ob in self.obstacle_manager.obstacles:
+            # 只要右侧 200px 内有障碍物，就认为“地面被占用”
+            if spawn_x <= ob.rect.x <= spawn_x + 200:
+                return True
+        return False
+
+    def spawn_coin(self):
+        spawn_x = 800
+        OBSTACLE_COIN_GAP = 140 # 可以比之前小一点
+
+        # ⭐ 只在“刚生成障碍物后”阻止一次地面金币
+        if self.waiting_after_obstacle:
+            if self.obstacle_too_close(OBSTACLE_COIN_GAP):
+                return None
+            else:
+                # 已经空出距离，可以生成地面金币串了
+                self.waiting_after_obstacle = False
+
+        spawn_ground_group = random.random() < 0.8
+
+        if spawn_ground_group and self.has_upcoming_obstacle(spawn_x):
+            spawn_ground_group = False
+
         if self.coins:
             last_coin = self.coins[-1]
-            # 如果最后一个金币太近，跳过这次生成
-            if last_coin.rect.x > 800 - self.min_spacing * (2 if spawn_ground_group else 1):
+            if last_coin.rect.x > spawn_x - self.min_spacing:
                 return None
 
-        # 生成金币组或单个金币
-        coins = self.spawn_coins_group(800, is_ground_group=spawn_ground_group)
-
-        # 如果因为障碍物而没有生成金币，尝试在空中生成金币作为替代
-        if not coins and spawn_ground_group:
-            # 如果地面金币组生成失败，尝试生成空中金币
-            coins = self.spawn_coins_group(800, is_ground_group=False)
-
+        coins = self.spawn_coins_group(spawn_x, is_ground_group=spawn_ground_group)
         return coins if coins else None
 
     def update(self, scroll_speed=0):

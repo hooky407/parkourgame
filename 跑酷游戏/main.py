@@ -170,7 +170,7 @@ class Game:
                 self.player.update()
 
             # 更新障碍物
-            self.obstacle_manager.update()
+            self.obstacle_manager.update(scroll_speed, self.coin_manager)
 
             #更新金币
             self.coin_manager.update(scroll_speed)

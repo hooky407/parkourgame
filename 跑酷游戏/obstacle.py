@@ -26,9 +26,8 @@ class Obstacle:
             pygame.draw.rect(self.image, (200, 50, 50), (0, 0, width, height))
             pygame.draw.rect(self.image, (150, 0, 0), (0, 0, width, height), 2)
 
-    def move(self):
-        """移动障碍物"""
-        self.rect.x -= self.speed
+    def move(self, scroll_speed):
+        self.rect.x -= scroll_speed
 
         # 如果移出屏幕，标记为不活动
         if self.rect.right < 0:
@@ -57,6 +56,15 @@ class ObstacleManager:
             'image/ob3.png'
         ]
 
+    def coin_blocking(self, coin_manager, spawn_x):
+        for coin in coin_manager.coins:
+            # 只检测地面金币
+            if coin.is_ground_coin:
+                # 如果金币还在前方一段距离内
+                if spawn_x - 120 < coin.rect.right:
+                    return True
+        return False
+
     def spawn_obstacle(self):
         """生成一个新的障碍物"""
         # 随机高度和宽度
@@ -76,22 +84,25 @@ class ObstacleManager:
         obstacle = Obstacle(800, obstacle_y, obstacle_width, obstacle_height, obstacle_speed, image_path)
         return obstacle
 
-    def update(self):
-        """更新障碍物状态"""
-        # 计时生成新障碍物
+    def update(self, scroll_speed, coin_manager=None):
         self.spawn_timer += 1
         if self.spawn_timer >= self.spawn_interval:
-            new_obstacle = self.spawn_obstacle()
-            if new_obstacle:
-                self.obstacles.append(new_obstacle)
-                self.spawn_interval = random.randint(80, 150)
-                self.spawn_timer = 0
 
-        # 更新所有障碍物位置
+            if coin_manager and self.coin_blocking(coin_manager, 800):
+                pass  # ⭐ 只阻止生成
+            else:
+                new_obstacle = self.spawn_obstacle()
+                if new_obstacle:
+                    self.obstacles.append(new_obstacle)
+                    self.spawn_interval = random.randint(80, 150)
+                    self.spawn_timer = 0
+
+                if coin_manager:
+                    coin_manager.waiting_after_obstacle = True
+
+        # ⭐⭐⭐ 永远要执行：移动障碍物
         for obstacle in self.obstacles[:]:
-            obstacle.move()
-
-            # 移除不活动的障碍物
+            obstacle.move(scroll_speed)
             if not obstacle.is_active:
                 self.obstacles.remove(obstacle)
 

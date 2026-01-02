@@ -96,7 +96,7 @@ class Player:
         return False
 
     def update(self):
-        """更新玩家状态"""␊
+        """更新玩家状态"""
         # 应用重力␊
         self.velocity_y += 0.5  # 重力加速度␊
 
@@ -134,8 +134,9 @@ class Player:
         self.current_frame = 0  # 重置动画帧
 
     def draw(self, screen):
-        """绘制玩家"""␊
+        """绘制玩家"""
         # 绘制当前动画帧␊
         current_image = self.animation_frames[self.current_frame]
         screen.blit(current_image, self.rect)
+
 

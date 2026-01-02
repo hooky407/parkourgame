@@ -439,10 +439,10 @@ class Game:
         elif self.state == "shop":
             self.update_shop()
 
-    def update_playing(self):␊
+    def update_playing(self):
         """更新游戏进行状态"""␊
         # 获取背景滚动速度␊
-        scroll_speed = 8␊
+        scroll_speed = 8
 
         # 更新背景滚动
         self.update_background()
@@ -1181,3 +1181,4 @@ if __name__ == "__main__":
     game = Game()
 
     game.run()
+

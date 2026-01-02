@@ -8,6 +8,7 @@ from player import Player
 from obstacle import ObstacleManager
 from coin import CoinManager
 from save_system import SaveSystem
+from combat_system import MonsterManager
 
 # 初始化pygame
 pygame.init()
@@ -29,6 +30,7 @@ class Game:
         self.player = None
         self.obstacle_manager = ObstacleManager()
         self.coin_manager = CoinManager(self.obstacle_manager)
+        self.monster_manager = MonsterManager()
         self.save_system = SaveSystem()
 
         # 4. 游戏数据
@@ -182,6 +184,7 @@ class Game:
         self.current_game_coins = 0
         self.obstacle_manager.clear()
         self.coin_manager.clear()
+        self.monster_manager.reset()
         self.stars = []  # 清空星星特效
 
         # 进入游戏状态
@@ -194,6 +197,7 @@ class Game:
 
         self.obstacle_manager.clear()
         self.coin_manager.clear()
+        self.monster_manager.reset()
         self.stars = []
 
         # 重置当前游戏数据
@@ -235,6 +239,9 @@ class Game:
         if event.key == pygame.K_SPACE:
             if self.player:
                 self.player.jump()
+        elif event.key == pygame.K_f:
+            if self.player:
+                self.monster_manager.fire_bullet(self.player)
 
     def handle_mouse_click(self):
         """处理鼠标点击"""
@@ -420,6 +427,34 @@ class Game:
             if save_info:
                 self.coins = save_info["total_coins"]
 
+    def handle_player_hit(self, clear_threats):
+        """处理玩家受到碰撞或攻击时的逻辑。"""
+        if self.extra_life_active and not self.extra_life_used:
+            self.extra_life_used = True
+            clear_threats()
+            return
+
+        self.state = "game_over"
+        self.game_over_time = time.time()
+
+        if self.save_system.current_save:
+            final_coins = self.current_game_coins
+            if self.coin_double_active:
+                final_coins *= 2
+
+            self.save_system.update_save(self.score, final_coins, self.selected_character)
+            self.update_game_data_from_save()
+
+    def clear_colliding_obstacles(self):
+        for obstacle in self.obstacle_manager.obstacles[:]:
+            if obstacle.rect.colliderect(self.player.rect):
+                obstacle.is_active = False
+
+    def clear_colliding_monsters(self):
+        for monster in self.monster_manager.monsters[:]:
+            if monster.rect.colliderect(self.player.rect):
+                self.monster_manager.monsters.remove(monster)
+
     # ==================== 游戏更新方法 ====================
     def update(self):
         """更新游戏状态"""
@@ -448,6 +483,11 @@ class Game:
         # 更新金币
         self.coin_manager.update(scroll_speed)
 
+        # 更新怪物系统
+        monster_result = self.monster_manager.update(scroll_speed, self.player.rect if self.player else None)
+        if monster_result["kills"] > 0:
+            self.score += monster_result["kills"] * 20
+
         # 检测金币收集
         if self.player:
             # 计算金币倍数
@@ -472,26 +512,10 @@ class Game:
 
         # 检测碰撞
         if self.player and self.obstacle_manager.check_collisions(self.player.rect):
-            if self.extra_life_active and not self.extra_life_used:
-                # 使用额外生命，清除碰撞的障碍物
-                self.extra_life_used = True
-                # 清除所有与玩家碰撞的障碍物
-                for obstacle in self.obstacle_manager.obstacles[:]:
-                    if obstacle.rect.colliderect(self.player.rect):
-                        obstacle.is_active = False
-            else:
-                self.state = "game_over"
-                self.game_over_time = time.time()
+            self.handle_player_hit(self.clear_colliding_obstacles)
 
-                # 保存游戏记录到存档
-                if self.save_system.current_save:
-                    # 如果有金币翻倍效果，调整最终金币数
-                    final_coins = self.current_game_coins
-                    if self.coin_double_active:
-                        final_coins *= 2
-
-                    self.save_system.update_save(self.score, final_coins, self.selected_character)
-                    self.update_game_data_from_save()
+        if self.player and monster_result["player_hit"]:
+            self.handle_player_hit(self.clear_colliding_monsters)
 
         # 更新星星特效
         if self.star_effect_active and self.player:
@@ -1019,6 +1043,9 @@ class Game:
 
         # 绘制障碍物
         self.obstacle_manager.draw(self.screen)
+
+        # 绘制怪物与子弹
+        self.monster_manager.draw(self.screen)
 
         # 绘制金币
         self.coin_manager.draw(self.screen)

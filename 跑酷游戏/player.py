@@ -5,7 +5,7 @@ import glob
 
 
 class Player:
-    def __init__(self, x, y, can_double_jump=False, player_id=1, image_folder=None):
+        def __init__(self, x, y, can_double_jump=False, player_id=1, image_folder=None, shoot_image_path=None):
         # 基本属性
         self.rect = pygame.Rect(x, y, 50, 50)
 
@@ -14,6 +14,9 @@ class Player:
         self.current_frame = 0  # 当前帧索引
         self.animation_speed = 10  # 动画速度（帧数越高越慢）
         self.animation_counter = 0  # 动画计数器
+        self.shoot_image = pygame.image.load(
+            shoot_image_path).convert_alpha() if shoot_image_path else None
+        self.shoot_timer = 0
 
         # 加载动画帧
         self.load_animation_frames(image_folder)
@@ -97,8 +100,10 @@ class Player:
 
     def update(self):
         """更新玩家状态"""
-        # 应用重力␊
-        self.velocity_y += 0.5  # 重力加速度␊
+        if self.shoot_timer > 0:
+            self.shoot_timer -= 1
+        # 应用重力
+        self.velocity_y += 0.5  # 重力加速度
 
         # 更新位置
         self.rect.y += self.velocity_y
@@ -135,8 +140,13 @@ class Player:
 
     def draw(self, screen):
         """绘制玩家"""
-        # 绘制当前动画帧␊
-        current_image = self.animation_frames[self.current_frame]
-        screen.blit(current_image, self.rect)
+        # 绘制当前动画帧
+        if self.shoot_timer > 0 and self.shoot_image:
+            screen.blit(self.shoot_image, self.rect)
+        else:
+            current_image = self.animation_frames[self.current_frame]
+            screen.blit(current_image, self.rect)
 
-
+    def trigger_shooting_pose(self, duration=10):
+        """在指定时间内切换到射击动作"""
+        self.shoot_timer = max(self.shoot_timer, duration)

@@ -9,6 +9,7 @@ from obstacle import ObstacleManager
 from coin import CoinManager
 from save_system import SaveSystem
 from battle_system import BattleBullet, BattleMonster
+from enemy import EmemyManager
 
 
 # 初始化pygame
@@ -1415,4 +1416,5 @@ if __name__ == "__main__":
     game = Game()
 
     game.run()
+
 

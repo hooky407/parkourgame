@@ -128,13 +128,17 @@ class Player:
                 self.shoot_frame = pygame.image.load(shoot_image_path).convert_alpha()
                 self.shoot_frame = pygame.transform.scale(self.shoot_frame, (50, 50))
                 print(f"成功加载射击图片: {shoot_image_path}")
+                return
             except Exception as e:
                 print(f"加载射击图片失败: {e}")
-                # 如果射击图片加载失败，创建默认射击图片
-                self.shoot_frame = self.create_default_shoot_image(player_id)
+
+        # 如果射击图片未能加载，改为使用静态图片以保持一致外观
+        if self.static_frame is not None:
+            self.shoot_frame = self.static_frame
+            print("使用静态图片作为射击图片")
         else:
-            # 如果没有提供射击图片，创建默认射击图片
-            print("未提供射击图片，创建默认射击图片")
+            # 如果静态图片也不存在，创建默认射击图片
+            print("未提供射击图片，且静态图片不存在，创建默认射击图片")
             self.shoot_frame = self.create_default_shoot_image(player_id)
     
     def create_default_shoot_image(self, player_id):
@@ -280,4 +284,5 @@ class Player:
     def trigger_shooting_pose(self, duration=10):
         """在指定时间内切换到射击动作"""
         self.shoot_timer = max(self.shoot_timer, duration)
+
 

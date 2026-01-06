@@ -1353,14 +1353,14 @@ class Game:
             return
 
         # 绘制分数
-        score_text = self.medium_font.render(f"分数: {int(self.score)}", True, (0, 0, 0))␊
+        score_text = self.medium_font.render(f"分数: {int(self.score)}", True, (0, 0, 0))
         self.screen.blit(score_text, (20, 10))
 
         # 绘制最高分
         high_score = 0
         if self.save_system.current_save:
             high_score = self.save_system.current_save["high_score"]
-        high_score_text = self.medium_font.render(f"最高分: {high_score}", True, (0, 0, 0))␊
+        high_score_text = self.medium_font.render(f"最高分: {high_score}", True, (0, 0, 0))
         self.screen.blit(high_score_text, (20, 50))
 
         # 绘制生命值
@@ -1414,5 +1414,6 @@ if __name__ == "__main__":
     game = Game()
 
     game.run()
+
 
 

@@ -9,7 +9,7 @@ from obstacle import ObstacleManager
 from coin import CoinManager
 from save_system import SaveSystem
 from battle_system import BattleBullet, BattleMonster
-from enemy import EmemyManager
+from enemy import EnemyManager
 
 
 # 初始化pygame
@@ -169,7 +169,7 @@ class Game:
         print(f"成功加载商店背景: {background_path}")
         return background
 
-    def load_shop_images(self):␊
+    def load_shop_images(self):
         """加载商店物品图片（简化版）"""
         shop_images = {}
         item_images = {
@@ -183,7 +183,7 @@ class Game:
             image = pygame.image.load(path).convert_alpha()
             image = pygame.transform.scale(image, (80, 80))
             shop_images[item_type] = image
-           print(f"成功加载商店图片: {path}")
+            print(f"成功加载商店图片: {path}")
 
         return shop_images
 
@@ -238,7 +238,7 @@ class Game:
                              can_double_jump=ability["can_double_jump"],
                              player_id=self.selected_character,
                              image_folder=animation_folder,
-                             shoot_image_path=self.battle_assets.get("player_shoot"))
+                             shoot_image_path="image/player_shoot.png")
 
         self.score = 0
         self.current_game_coins = 0
@@ -302,7 +302,7 @@ class Game:
         # 更新鼠标位置
         self.mouse_pos = pygame.mouse.get_pos()
 
-   def handle_keydown(self, event):
+    def handle_keydown(self, event):
         """处理键盘按下事件"""
         if self.state in ("playing", "battle"):
             self.handle_playing_keydown(event)
@@ -1223,20 +1223,12 @@ class Game:
         start_text_rect = start_text.get_rect(center=start_rect.center)
         self.screen.blit(start_text, start_text_rect)
 
+
     def draw_game_screen(self):
         """绘制游戏画面"""
-        # 绘制背景
-        self.screen.blit(self.background, (self.bg_x1, 0))
-        self.screen.blit(self.background, (self.bg_x2, 0))
-start_text = self.medium_font.render("开始游戏", True, (255, 255, 255))␊
-        start_text_rect = start_text.get_rect(center=start_rect.center)␊
-        self.screen.blit(start_text, start_text_rect)␊
-␊
-    def draw_game_screen(self):␊
-        """绘制游戏画面"""␊
         # 绘制背景␊
-        self.screen.blit(self.background, (self.bg_x1, 0))␊
-        self.screen.blit(self.background, (self.bg_x2, 0))␊
+        self.screen.blit(self.bg_layers['bg3'], (self.bg3_x1, 0))  # 近层背景
+        self.screen.blit(self.bg_layers['bg3'], (self.bg3_x2, 0))
 
         # 绘制障碍物
         self.obstacle_manager.draw(self.screen)
@@ -1258,14 +1250,14 @@ start_text = self.medium_font.render("开始游戏", True, (255, 255, 255))␊
         if self.show_coin_effect:
             self.draw_coin_effect()
 
-         # 绘制UI信息
+        # 绘制UI信息
         self.draw_ui()
 
     def draw_battle_screen(self):
         """绘制战斗界面"""
         # 背景保持静止
-        self.screen.blit(self.background, (self.bg_x1, 0))
-        self.screen.blit(self.background, (self.bg_x2, 0))
+        self.screen.blit(self.bg_layers['bg3'], (self.bg3_x1, 0))
+        self.screen.blit(self.bg_layers['bg3'], (self.bg3_x2, 0))
 
         # 绘制玩家
         if self.player:
@@ -1416,5 +1408,3 @@ if __name__ == "__main__":
     game = Game()
 
     game.run()
-
-

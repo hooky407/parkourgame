@@ -196,10 +196,28 @@ class Game:
             "monster": 'image/monster.png',
             "player_shoot": 'image/player_shoot.png'
         }
+        placeholder_sizes = {
+            "player_bullet": (20, 10),
+            "monster_bullet": (20, 10),
+            "monster": (80, 80),
+            "player_shoot": (50, 50),
+        }
+
+        def create_placeholder(size, color):
+            surface = pygame.Surface(size, pygame.SRCALPHA)
+            surface.fill(color)
+            pygame.draw.rect(surface, (255, 255, 255), surface.get_rect(), 2)
+            return surface
+
         for key, path in paths.items():
             if os.path.exists(path):
                 assets[key] = pygame.image.load(path).convert_alpha()
+            else:
+                # 使用占位图，确保战斗元素始终可见
+                color = (255, 200, 80) if "bullet" in key else (200, 120, 120)
+                assets[key] = create_placeholder(placeholder_sizes[key], color)
         return assets
+
 
     # ==================== 游戏核心控制方法 ====================
     def run(self):
@@ -1414,6 +1432,7 @@ if __name__ == "__main__":
     game = Game()
 
     game.run()
+
 
 
 

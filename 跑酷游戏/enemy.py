@@ -200,8 +200,7 @@ class EnemyManager:
         # 仅保留绵羊的图片路径，优先使用仓库现有的贴图
         base_dir = os.path.dirname(__file__)
         expected = {
-            "sheep": os.path.join(base_dir, "跑酷游戏", "assets", "sheep.png"),  # 绵羊图片路径
-        }
+            "sheep": os.path.join(base_dir, "assets", "sheep.png"),  # 绵羊图片路径（修正为实际位置）          
 
         for monster_type, path in expected.items():
             if os.path.exists(path):

@@ -25,7 +25,9 @@ class BattleBullet:
         if self.image:
             screen.blit(self.image, self.rect)
         else:
-            pygame.draw.rect(screen, (255, 255, 255), self.rect)
+            color = (255, 230, 120) if self.direction == "right" else (255, 120, 120)
+            pygame.draw.rect(screen, color, self.rect)
+
 
 
 class BattleMonster:
